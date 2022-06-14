@@ -224,16 +224,19 @@ def create_app(test_config=None):
     one question at a time is displayed, the user is allowed to answer
     and shown whether they were correct or not.
     """
-    @app.route("/quizzes", methods=["POST"])
-    def quiz():
+    @app.route("/quizzes", methods=['POST'])
+    def get_quizzes():
         body = request.get_json()
         try:
             get_prev_que = body.get('previous_questions')
+
             get_quiz_category = body.get('quiz_category')['id']
+
             try:
                 get_prev_que is None
             except:
                 abort(400)
+
 
             return filter_quiz(get_prev_que, get_quiz_category)
 
@@ -242,29 +245,30 @@ def create_app(test_config=None):
 
     def filter_quiz(get_prev_que, get_quiz_category):
         trivia_questions = []
-        if get_quiz_category is 0:
-            trivia_questions = Question.query.filter(Question.id.notin_(get_prev_que)).all()
+        if get_quiz_category == 0:
+            trivia_questions = Question.query.filter(
+                    Question.id.notin_(get_prev_que)).all()
         else:
-            category = Category.query.get(get_quiz_category)
-            if category is None:
-                abort(404)
-            trivia_questions = Question.query.filter(Question.id.notin_(get_prev_que), Question.category == get_quiz_category).all()
-            # retrieved_question = None
-        return return_rand_questions(trivia_questions)
-
-    def return_rand_questions(trivia_questions):
+            trivia_questions = get_filtered_quiz(get_prev_que, get_quiz_category)
+        retrieved_question = None
         if len(trivia_questions) > 0:
-            retrieved_question = get_rand_questions(trivia_questions)
+            rand_quiz = random.randrange(0, len(trivia_questions))
+            retrieved_question = trivia_questions[rand_quiz].format()
         return jsonify({
                 'success': True,
                 'question': retrieved_question,
                 'total_questions': len(trivia_questions)
             })
 
-    def get_rand_questions(trivia_questions):
-        index = random.randrange(0, len(trivia_questions))
-        retrieved_question = trivia_questions[index].format()
-        return retrieved_question
+    def get_filtered_quiz(get_prev_que, get_quiz_category):
+        category = Category.query.get(get_quiz_category)
+        if category is None:
+            abort(404)
+        trivia_questions = Question.query.filter(Question.id.notin_(
+                    get_prev_que), Question.category == get_quiz_category).all()
+
+        return trivia_questions
+
 
     """
     @TODO:

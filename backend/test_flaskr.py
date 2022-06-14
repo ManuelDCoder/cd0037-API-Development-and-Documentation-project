@@ -1,10 +1,13 @@
 import os
+import random
 import unittest
 import json
 from flask_sqlalchemy import SQLAlchemy
+from requests import request
+from sqlalchemy import func
 
 from flaskr import create_app
-from models import setup_db, Question
+from models import Category, setup_db, Question
 
 
 class TriviaTestCase(unittest.TestCase):
@@ -14,9 +17,9 @@ class TriviaTestCase(unittest.TestCase):
         """Define test variables and initialize app."""
         self.app = create_app()
         self.client = self.app.test_client
-        self.database_name = "trivia_test"
+        self.database_name = os.environ['DB_TEST']
         self.database_path = "postgresql://{}:{}@{}/{}".format(
-            "postgres", "Anthonym4", "localhost:5432", self.database_name
+            os.environ['POSTGRES_USER'], os.environ['PASSWORD'], os.environ['DB_HOST'], self.database_name
         )
         setup_db(self.app, self.database_path)
 
@@ -73,6 +76,25 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data["success"], False)
         self.assertEqual(data["message"], "Not Found")
 
+    def test_delete_question_with_valid_id(self):
+        """testing question deletion with valid id"""
+        question = Question.query.order_by(self.db.desc(Question.id)).first()
+        self.assertNotEqual(question, None)
+        res = self.client().delete("/questions/"+str(question.id))
+        data = json.loads(res.data)
+        
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data["success"], True)
+        self.assertTrue(data["total_questions"])
+
+    def test_delete_question_with_invalid_id(self):
+        """testing question deletion with invalid id"""
+        res = self.client().delete("/questions/5933")
+        data = json.loads(res.data)
+        self.assertEqual(res.status_code, 422)
+        self.assertEqual(data["success"], False)
+        self.assertEqual(data["message"], "Unprocessable")
+        
     def test_create_valid_question(self):
 
         """request creation with valid data"""
@@ -100,25 +122,6 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertTrue(data["success"])
 
-    def test_delete_question_with_valid_id(self):
-        """testing question deletion with valid id"""
-        question = Question.query.order_by(self.db.desc(Question.id)).first()
-        self.assertNotEqual(question, None)
-        res = self.client().delete("/questions/"+str(question.id))
-        data = json.loads(res.data)
-        
-        self.assertEqual(res.status_code, 200)
-        self.assertEqual(data["success"], True)
-        self.assertTrue(data["total_questions"])
-
-    def test_delete_question_with_invalid_id(self):
-        """testing question deletion with invalid id"""
-        res = self.client().delete("/questions/5933")
-        data = json.loads(res.data)
-        self.assertEqual(res.status_code, 422)
-        self.assertEqual(data["success"], False)
-        self.assertEqual(data["message"], "Unprocessable")
-
     def test_search_question_with_existing_data(self):
         """test search questions with existing results"""
         res = self.client().post("/questions", json={"search": "validsearch"})
@@ -139,6 +142,7 @@ class TriviaTestCase(unittest.TestCase):
         self.assertTrue(len(data["questions"]))
 
 
+    
 # Make the tests conveniently executable
 if __name__ == "__main__":
     unittest.main()
