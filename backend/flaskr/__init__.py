@@ -195,7 +195,7 @@ def create_app(test_config=None):
     categories in the left column will cause only questions of that
     category to be shown.
     """
-    @app.route("/categories/<int:category_id>/questions")
+    @app.route("/categories/<int:category_id>/questions", methods=["GET"])
     def questions_by_categories(category_id):
         get_category = Category.query.get(category_id)
         if category_id is None:
@@ -232,10 +232,10 @@ def create_app(test_config=None):
 
             get_quiz_category = body.get('quiz_category')['id']
 
-            try:
-                get_prev_que is None
-            except:
-                abort(400)
+            # try:
+            #     get_prev_que is None
+            # except:
+            #     abort(400)
 
 
             return filter_quiz(get_prev_que, get_quiz_category)

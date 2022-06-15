@@ -1,10 +1,7 @@
 import os
-import random
 import unittest
 import json
 from flask_sqlalchemy import SQLAlchemy
-from requests import request
-from sqlalchemy import func
 
 from flaskr import create_app
 from models import Category, setup_db, Question
@@ -82,7 +79,7 @@ class TriviaTestCase(unittest.TestCase):
         self.assertNotEqual(question, None)
         res = self.client().delete("/questions/"+str(question.id))
         data = json.loads(res.data)
-        
+
         self.assertEqual(res.status_code, 200)
         self.assertEqual(data["success"], True)
         self.assertTrue(data["total_questions"])
@@ -94,17 +91,16 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(res.status_code, 422)
         self.assertEqual(data["success"], False)
         self.assertEqual(data["message"], "Unprocessable")
-        
-    def test_create_valid_question(self):
 
+    def test_create_valid_question(self):
         """request creation with valid data"""
         new_que = {
-            "question": "testing question","answer": "test passed", 
+            "question": "testing question", "answer": "test passed",
             "difficulty": 1, "category": 1
-            }
+        }
         res = self.client().post("/questions", json=new_que)
         data = json.loads(res.data)
-        
+
         valid_que_post = Question.query.order_by(
             self.db.desc(Question.id)).first()
         self.assertEqual(res.status_code, 200)
@@ -112,7 +108,7 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data["new_question_id"], valid_que_post.id)
         self.assertTrue(data["total_questions"])
         self.assertTrue(len(data["questions"]))
-        
+
     def test_create_invalid_question(self):
         """testing incomplete question post """
         new_question = {"answer": "answer", "difficulty": 1, "category": 1}
@@ -133,16 +129,53 @@ class TriviaTestCase(unittest.TestCase):
 
     def test_search_question_with_non_existing_data(self):
         """test question search with no results"""
-        res = self.client().post("/questions", json={"search": "sdamcc@wqs!qw#"})
+        res = self.client().post(
+            "/questions", json={"search": "sdamcc@wqs!qw#"})
         data = json.loads(res.data)
-        
+
         self.assertEqual(res.status_code, 200)
         self.assertEqual(data["success"], True)
         self.assertTrue(data["total_questions"])
         self.assertTrue(len(data["questions"]))
 
-
+    def test_get_questions_by_category(self):
+        res = self.client().get("/categories/1/questions")  # science category
+        data = json.loads(res.data)
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(data["success"])
+        self.assertTrue(data["questions"])
+        self.assertTrue(data["category_type"])
     
+    def test_get_questions_by_non_existing_category(self):
+        res = self.client().get("/categories/55/questions")
+        data = json.loads(res.data)
+        self.assertEqual(res.status_code, 422)
+        self.assertFalse(data["success"])
+        self.assertEqual(data["message"], "Unprocessable")
+        
+    def test_quiz_play(self):
+
+        res = self.client().post('/quizzes', 
+        json={'previous_questions': [], 
+              'quiz_category': {'type': 'Science', 'id': "2"}
+        })
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(data['success'])
+        self.assertTrue(data['question'])
+
+    def test_play_quiz_failed(self):
+        """test to play a quiz with empty  or no json defined"""
+            
+        res = self.client().post('/quizzes')
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 400)
+        self.assertFalse(data['success'])
+        self.assertEqual(data['error'], 400)
+        self.assertEqual(data['message'], 'Bad Request')
+
 # Make the tests conveniently executable
 if __name__ == "__main__":
     unittest.main()
